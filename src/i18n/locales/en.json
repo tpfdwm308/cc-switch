@@ -1084,11 +1084,7 @@
   "providerAdvanced": {
     "outboundProxy": {
       "title": "Outbound Proxy",
-      "modeGlobal": "Follow global",
-      "modeDirect": "Direct",
-      "modeCustom": "Custom",
-      "customPlaceholder": "http://127.0.0.1:7890 / socks5://127.0.0.1:1080",
-      "customEmpty": "Falls back to the global proxy when left empty.",
+      "directLabel": "Direct (bypass global proxy)",
       "directDesc": "This provider connects directly upstream, ignoring the global outbound proxy.",
       "followGlobalActive": "Following global outbound proxy: {{proxy}}",
       "followGlobalNone": "No global outbound proxy set; connecting directly.",

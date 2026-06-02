@@ -1084,11 +1084,7 @@
   "providerAdvanced": {
     "outboundProxy": {
       "title": "出站代理",
-      "modeGlobal": "跟随全局",
-      "modeDirect": "直连",
-      "modeCustom": "自定义",
-      "customPlaceholder": "http://127.0.0.1:7890 / socks5://127.0.0.1:1080",
-      "customEmpty": "未填写地址时回退为跟随全局。",
+      "directLabel": "直连（绕过全局代理）",
       "directDesc": "此供应商将直连上游，忽略全局出站代理。",
       "followGlobalActive": "跟随全局出站代理：{{proxy}}",
       "followGlobalNone": "全局未设置出站代理，当前为直连。",

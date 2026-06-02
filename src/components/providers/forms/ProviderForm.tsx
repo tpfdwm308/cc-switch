@@ -300,11 +300,8 @@ function ProviderFormFull({
   const [endpointAutoSelect, setEndpointAutoSelect] = useState<boolean>(
     () => initialData?.meta?.endpointAutoSelect ?? true,
   );
-  const [proxyMode, setProxyMode] = useState<"global" | "direct" | "custom">(
+  const [proxyMode, setProxyMode] = useState<"global" | "direct">(
     () => initialData?.meta?.proxyMode ?? "global",
-  );
-  const [proxyUrl, setProxyUrl] = useState<string>(
-    () => initialData?.meta?.proxyUrl ?? "",
   );
   const supportsFullUrl = appId === "claude" || appId === "codex";
   const [localIsFullUrl, setLocalIsFullUrl] = useState<boolean>(() => {
@@ -348,7 +345,6 @@ function ProviderFormFull({
     }
     setEndpointAutoSelect(initialData?.meta?.endpointAutoSelect ?? true);
     setProxyMode(initialData?.meta?.proxyMode ?? "global");
-    setProxyUrl(initialData?.meta?.proxyUrl ?? "");
     setLocalIsFullUrl(
       supportsFullUrl ? (initialData?.meta?.isFullUrl ?? false) : false,
     );
@@ -1366,9 +1362,7 @@ function ProviderFormFull({
               ? useGeminiCommonConfigFlag
               : undefined,
       endpointAutoSelect,
-      proxyMode: proxyMode === "global" ? undefined : proxyMode,
-      proxyUrl:
-        proxyMode === "custom" && proxyUrl.trim() ? proxyUrl.trim() : undefined,
+      proxyMode: proxyMode === "direct" ? "direct" : undefined,
       claudeDesktopMode: undefined,
       // 保存 providerType（用于识别 Copilot / Codex OAuth 等特殊供应商）
       providerType,
@@ -2325,8 +2319,6 @@ function ProviderFormFull({
                 onPricingConfigChange={setPricingConfig}
                 proxyMode={proxyMode}
                 onProxyModeChange={setProxyMode}
-                proxyUrl={proxyUrl}
-                onProxyUrlChange={setProxyUrl}
               />
             )}
 

@@ -69,18 +69,10 @@ impl Provider {
     /// 解析该供应商生效的出站代理 URL（仅在 CC Switch 代理转发该请求时使用）。
     ///
     /// - `Direct`：强制直连，返回 `None`（忽略全局出站代理）。
-    /// - `Custom`：使用 `proxy_url`；为空/空白则回退到全局 `global`。
     /// - `Global` 或未设置：跟随传入的全局出站代理 `global`。
     pub fn resolve_proxy_url(&self, global: Option<&str>) -> Option<String> {
-        let meta = self.meta.as_ref();
-        match meta.and_then(|m| m.proxy_mode.as_ref()) {
+        match self.meta.as_ref().and_then(|m| m.proxy_mode.as_ref()) {
             Some(ProviderProxyMode::Direct) => None,
-            Some(ProviderProxyMode::Custom) => meta
-                .and_then(|m| m.proxy_url.as_deref())
-                .map(str::trim)
-                .filter(|s| !s.is_empty())
-                .map(|s| s.to_string())
-                .or_else(|| global.map(|s| s.to_string())),
             _ => global.map(|s| s.to_string()),
         }
     }
@@ -376,8 +368,6 @@ pub enum ProviderProxyMode {
     Global,
     /// 强制直连，绕过全局出站代理。
     Direct,
-    /// 使用该供应商自定义的出站代理 URL（见 `ProviderMeta::proxy_url`）。
-    Custom,
 }
 
 /// Claude Desktop 本地路由模式下暴露给 Desktop 的安全模型路由。
@@ -511,9 +501,6 @@ pub struct ProviderMeta {
     /// 仅在 CC Switch 代理转发该供应商请求时生效；未设置等价于 `Global`。
     #[serde(rename = "proxyMode", skip_serializing_if = "Option::is_none")]
     pub proxy_mode: Option<ProviderProxyMode>,
-    /// 自定义出站代理 URL，仅当 `proxy_mode == Custom` 时使用；为空则回退到全局。
-    #[serde(rename = "proxyUrl", skip_serializing_if = "Option::is_none")]
-    pub proxy_url: Option<String>,
 }
 
 impl ProviderMeta {
@@ -1026,33 +1013,6 @@ mod tests {
             ..Default::default()
         });
         assert_eq!(provider.resolve_proxy_url(global), None);
-        assert_eq!(provider.resolve_proxy_url(None), None);
-
-        // Custom（非空）：使用自定义 URL，忽略全局
-        provider.meta = Some(ProviderMeta {
-            proxy_mode: Some(ProviderProxyMode::Custom),
-            proxy_url: Some("socks5://127.0.0.1:1080".to_string()),
-            ..Default::default()
-        });
-        assert_eq!(
-            provider.resolve_proxy_url(global),
-            Some("socks5://127.0.0.1:1080".to_string())
-        );
-        assert_eq!(
-            provider.resolve_proxy_url(None),
-            Some("socks5://127.0.0.1:1080".to_string())
-        );
-
-        // Custom（空白）：回退到全局
-        provider.meta = Some(ProviderMeta {
-            proxy_mode: Some(ProviderProxyMode::Custom),
-            proxy_url: Some("   ".to_string()),
-            ..Default::default()
-        });
-        assert_eq!(
-            provider.resolve_proxy_url(global),
-            Some("http://127.0.0.1:7890".to_string())
-        );
         assert_eq!(provider.resolve_proxy_url(None), None);
     }
 

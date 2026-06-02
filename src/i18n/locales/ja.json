@@ -1084,11 +1084,7 @@
   "providerAdvanced": {
     "outboundProxy": {
       "title": "アウトバウンドプロキシ",
-      "modeGlobal": "グローバルに従う",
-      "modeDirect": "直接接続",
-      "modeCustom": "カスタム",
-      "customPlaceholder": "http://127.0.0.1:7890 / socks5://127.0.0.1:1080",
-      "customEmpty": "未入力の場合はグローバル設定に従います。",
+      "directLabel": "直接接続（グローバルプロキシをバイパス）",
       "directDesc": "このプロバイダーはグローバルアウトバウンドプロキシを無視して直接接続します。",
       "followGlobalActive": "グローバルアウトバウンドプロキシを使用: {{proxy}}",
       "followGlobalNone": "グローバルアウトバウンドプロキシは未設定です。直接接続します。",
