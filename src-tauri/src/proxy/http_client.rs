@@ -5,6 +5,7 @@
 
 use once_cell::sync::OnceCell;
 use reqwest::Client;
+use std::collections::HashMap;
 use std::env;
 use std::net::IpAddr;
 use std::sync::RwLock;
@@ -18,6 +19,10 @@ static CURRENT_PROXY_URL: OnceCell<RwLock<Option<String>>> = OnceCell::new();
 
 /// CC Switch 代理服务器当前监听的端口
 static CC_SWITCH_PROXY_PORT: OnceCell<RwLock<u16>> = OnceCell::new();
+
+/// 按出站代理 URL 缓存的客户端（用于「按供应商出站代理」）。
+/// key 为代理 URL，空串代表直连。与当前全局代理一致的 URL 不入缓存，统一走 `get()`。
+static CLIENT_CACHE: OnceCell<RwLock<HashMap<String, Client>>> = OnceCell::new();
 
 /// 设置 CC Switch 代理服务器的监听端口
 ///
@@ -194,6 +199,52 @@ pub fn get() -> Client {
             log::warn!("[GlobalProxy] [GP-004] Client not initialized, using fallback");
             build_client(None).unwrap_or_default()
         })
+}
+
+/// 按指定出站代理 URL 获取 HTTP 客户端（带缓存）。
+///
+/// 用于「按供应商出站代理」：转发时根据 `Provider::resolve_proxy_url` 的结果选择客户端。
+///
+/// - 传入的 URL 与当前全局代理一致时，复用全局客户端（保留其热更新能力）。
+/// - 其他 URL（含 `None`/空串 = 直连）按 key 缓存，避免每个请求重建客户端。
+///   直连与自定义代理均不随全局代理变化，缓存无需失效。
+/// - 构建失败时回退到全局客户端，保证转发不被代理配置问题阻断。
+pub fn get_for(proxy_url: Option<&str>) -> Client {
+    let effective = proxy_url.filter(|s| !s.trim().is_empty());
+
+    // 与当前全局代理一致 → 直接复用全局客户端
+    if effective.map(|s| s.to_string()) == get_current_proxy_url() {
+        return get();
+    }
+
+    // key 为代理 URL；空串代表直连
+    let key = effective.unwrap_or("").to_string();
+
+    let cache = CLIENT_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+
+    if let Ok(map) = cache.read() {
+        if let Some(client) = map.get(&key) {
+            return client.clone();
+        }
+    }
+
+    match build_client(effective) {
+        Ok(client) => {
+            if let Ok(mut map) = cache.write() {
+                map.insert(key, client.clone());
+            }
+            client
+        }
+        Err(e) => {
+            log::warn!(
+                "[GlobalProxy] [GP-005] get_for build failed for {}: {e}; falling back to global client",
+                effective
+                    .map(mask_url)
+                    .unwrap_or_else(|| "direct".to_string())
+            );
+            get()
+        }
+    }
 }
 
 /// 获取当前代理 URL

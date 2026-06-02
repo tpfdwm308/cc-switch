@@ -797,7 +797,10 @@
     "messageCopied": "已複製訊息內容",
     "conversationHistory": "對話紀錄",
     "expandContent": "展開完整內容",
-    "collapseContent": "收起"
+    "collapseContent": "收起",
+    "groupByFolder": "依目錄分組",
+    "flatView": "依時間排列",
+    "unknownFolder": "未知目錄"
   },
   "console": {
     "providerSwitchReceived": "收到供應商切換事件：",
@@ -1051,6 +1054,18 @@
     "empty": "暫無端點"
   },
   "providerAdvanced": {
+    "outboundProxy": {
+      "title": "出站代理",
+      "modeGlobal": "跟隨全域",
+      "modeDirect": "直連",
+      "modeCustom": "自訂",
+      "customPlaceholder": "http://127.0.0.1:7890 / socks5://127.0.0.1:1080",
+      "customEmpty": "未填寫位址時回退為跟隨全域。",
+      "directDesc": "此供應商將直連上游，忽略全域出站代理。",
+      "followGlobalActive": "跟隨全域出站代理：{{proxy}}",
+      "followGlobalNone": "全域未設定出站代理，目前為直連。",
+      "hint": "僅在 cc-switch 代理轉發該應用時生效。"
+    },
     "testConfig": "模型測試設定",
     "useCustomConfig": "使用獨立設定",
     "testConfigDesc": "為此供應商設定獨立的模型測試參數，不啟用時使用全域設定。",

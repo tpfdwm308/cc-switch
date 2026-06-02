@@ -826,7 +826,10 @@
     "messageCopied": "メッセージがコピーされました",
     "conversationHistory": "会話履歴",
     "expandContent": "全文を表示",
-    "collapseContent": "折りたたむ"
+    "collapseContent": "折りたたむ",
+    "groupByFolder": "フォルダーでグループ化",
+    "flatView": "時間順に表示",
+    "unknownFolder": "不明なフォルダー"
   },
   "console": {
     "providerSwitchReceived": "プロバイダー切り替えイベントを受信:",
@@ -1079,6 +1082,18 @@
     "empty": "エンドポイントがありません"
   },
   "providerAdvanced": {
+    "outboundProxy": {
+      "title": "アウトバウンドプロキシ",
+      "modeGlobal": "グローバルに従う",
+      "modeDirect": "直接接続",
+      "modeCustom": "カスタム",
+      "customPlaceholder": "http://127.0.0.1:7890 / socks5://127.0.0.1:1080",
+      "customEmpty": "未入力の場合はグローバル設定に従います。",
+      "directDesc": "このプロバイダーはグローバルアウトバウンドプロキシを無視して直接接続します。",
+      "followGlobalActive": "グローバルアウトバウンドプロキシを使用: {{proxy}}",
+      "followGlobalNone": "グローバルアウトバウンドプロキシは未設定です。直接接続します。",
+      "hint": "cc-switch のプロキシがこのアプリを転送する場合にのみ有効です。"
+    },
     "testConfig": "モデルテスト設定",
     "useCustomConfig": "個別設定を使用",
     "testConfigDesc": "このプロバイダーに個別のモデルテストパラメータを設定します。無効の場合はグローバル設定を使用します。",

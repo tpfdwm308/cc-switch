@@ -826,7 +826,10 @@
     "messageCopied": "已复制消息内容",
     "conversationHistory": "对话记录",
     "expandContent": "展开完整内容",
-    "collapseContent": "收起"
+    "collapseContent": "收起",
+    "groupByFolder": "按文件夹分组",
+    "flatView": "按时间排列",
+    "unknownFolder": "未知目录"
   },
   "console": {
     "providerSwitchReceived": "收到供应商切换事件:",
@@ -1079,6 +1082,18 @@
     "empty": "暂无端点"
   },
   "providerAdvanced": {
+    "outboundProxy": {
+      "title": "出站代理",
+      "modeGlobal": "跟随全局",
+      "modeDirect": "直连",
+      "modeCustom": "自定义",
+      "customPlaceholder": "http://127.0.0.1:7890 / socks5://127.0.0.1:1080",
+      "customEmpty": "未填写地址时回退为跟随全局。",
+      "directDesc": "此供应商将直连上游，忽略全局出站代理。",
+      "followGlobalActive": "跟随全局出站代理：{{proxy}}",
+      "followGlobalNone": "全局未设置出站代理，当前为直连。",
+      "hint": "仅在 cc-switch 代理转发该应用时生效。"
+    },
     "testConfig": "模型测试配置",
     "useCustomConfig": "使用单独配置",
     "testConfigDesc": "为此供应商配置单独的模型测试参数，不启用时使用全局配置。",

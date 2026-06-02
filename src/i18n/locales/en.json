@@ -826,7 +826,10 @@
     "messageCopied": "Message copied",
     "conversationHistory": "Conversation History",
     "expandContent": "Expand full content",
-    "collapseContent": "Collapse"
+    "collapseContent": "Collapse",
+    "groupByFolder": "Group by folder",
+    "flatView": "Sort by time",
+    "unknownFolder": "Unknown folder"
   },
   "console": {
     "providerSwitchReceived": "Received provider switch event:",
@@ -1079,6 +1082,18 @@
     "empty": "No endpoints"
   },
   "providerAdvanced": {
+    "outboundProxy": {
+      "title": "Outbound Proxy",
+      "modeGlobal": "Follow global",
+      "modeDirect": "Direct",
+      "modeCustom": "Custom",
+      "customPlaceholder": "http://127.0.0.1:7890 / socks5://127.0.0.1:1080",
+      "customEmpty": "Falls back to the global proxy when left empty.",
+      "directDesc": "This provider connects directly upstream, ignoring the global outbound proxy.",
+      "followGlobalActive": "Following global outbound proxy: {{proxy}}",
+      "followGlobalNone": "No global outbound proxy set; connecting directly.",
+      "hint": "Only effective when cc-switch's proxy forwards this app."
+    },
     "testConfig": "Model Test Config",
     "useCustomConfig": "Use separate config",
     "testConfigDesc": "Configure separate model testing parameters for this provider. Uses global settings when disabled.",

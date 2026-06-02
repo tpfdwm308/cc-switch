@@ -1,7 +1,17 @@
 import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, FlaskConical, Coins } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  FlaskConical,
+  Coins,
+  Globe,
+  Loader2,
+  Search,
+  TestTube2,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -13,6 +23,12 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { ProviderTestConfig } from "@/types";
+import {
+  useGlobalProxyUrl,
+  useScanProxies,
+  useTestProxy,
+  type DetectedProxy,
+} from "@/hooks/useGlobalProxy";
 
 export type PricingModelSourceOption = "inherit" | "request" | "response";
 
@@ -27,6 +43,10 @@ interface ProviderAdvancedConfigProps {
   pricingConfig: ProviderPricingConfig;
   onTestConfigChange: (config: ProviderTestConfig) => void;
   onPricingConfigChange: (config: ProviderPricingConfig) => void;
+  proxyMode: "global" | "direct" | "custom";
+  onProxyModeChange: (mode: "global" | "direct" | "custom") => void;
+  proxyUrl: string;
+  onProxyUrlChange: (url: string) => void;
 }
 
 export function ProviderAdvancedConfig({
@@ -34,8 +54,28 @@ export function ProviderAdvancedConfig({
   pricingConfig,
   onTestConfigChange,
   onPricingConfigChange,
+  proxyMode,
+  onProxyModeChange,
+  proxyUrl,
+  onProxyUrlChange,
 }: ProviderAdvancedConfigProps) {
   const { t } = useTranslation();
+  const { data: globalProxyUrl } = useGlobalProxyUrl();
+  const scanMutation = useScanProxies();
+  const testMutation = useTestProxy();
+  const [detectedProxies, setDetectedProxies] = useState<DetectedProxy[]>([]);
+
+  const handleScanProxies = async () => {
+    const result = await scanMutation.mutateAsync();
+    setDetectedProxies(result);
+  };
+
+  const handleTestProxy = async () => {
+    const trimmed = proxyUrl.trim();
+    if (trimmed) {
+      await testMutation.mutateAsync(trimmed);
+    }
+  };
   const [isTestConfigOpen, setIsTestConfigOpen] = useState(testConfig.enabled);
   const [isPricingConfigOpen, setIsPricingConfigOpen] = useState(
     pricingConfig.enabled,
@@ -51,6 +91,141 @@ export function ProviderAdvancedConfig({
 
   return (
     <div className="space-y-4">
+      {/* 出站代理 */}
+      <div className="rounded-lg border border-border/50 bg-muted/20">
+        <div className="flex w-full items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <Globe className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">
+              {t("providerAdvanced.outboundProxy.title", {
+                defaultValue: "出站代理",
+              })}
+            </span>
+          </div>
+          <Select
+            value={proxyMode}
+            onValueChange={(value) =>
+              onProxyModeChange(value as "global" | "direct" | "custom")
+            }
+          >
+            <SelectTrigger className="w-[150px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="global">
+                {t("providerAdvanced.outboundProxy.modeGlobal", {
+                  defaultValue: "跟随全局",
+                })}
+              </SelectItem>
+              <SelectItem value="direct">
+                {t("providerAdvanced.outboundProxy.modeDirect", {
+                  defaultValue: "直连",
+                })}
+              </SelectItem>
+              <SelectItem value="custom">
+                {t("providerAdvanced.outboundProxy.modeCustom", {
+                  defaultValue: "自定义",
+                })}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="border-t border-border/50 p-4 space-y-3">
+          {proxyMode === "custom" ? (
+            <>
+              <div className="flex gap-2">
+                <Input
+                  value={proxyUrl}
+                  onChange={(e) => onProxyUrlChange(e.target.value)}
+                  placeholder={t(
+                    "providerAdvanced.outboundProxy.customPlaceholder",
+                    {
+                      defaultValue:
+                        "http://127.0.0.1:7890 / socks5://127.0.0.1:1080",
+                    },
+                  )}
+                  className="flex-1 font-mono text-sm"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  disabled={scanMutation.isPending}
+                  onClick={handleScanProxies}
+                  title={t("settings.globalProxy.scan")}
+                >
+                  {scanMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  disabled={!proxyUrl.trim() || testMutation.isPending}
+                  onClick={handleTestProxy}
+                  title={t("settings.globalProxy.test")}
+                >
+                  {testMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <TestTube2 className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              {detectedProxies.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {detectedProxies.map((p) => (
+                    <Button
+                      key={p.url}
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        onProxyUrlChange(p.url);
+                        setDetectedProxies([]);
+                      }}
+                      className="font-mono text-xs"
+                    >
+                      {p.url}
+                    </Button>
+                  ))}
+                </div>
+              )}
+              {!proxyUrl.trim() && (
+                <p className="text-xs text-amber-600 dark:text-amber-500">
+                  {t("providerAdvanced.outboundProxy.customEmpty", {
+                    defaultValue: "未填写地址时回退为跟随全局。",
+                  })}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {proxyMode === "direct"
+                ? t("providerAdvanced.outboundProxy.directDesc", {
+                    defaultValue: "此供应商将直连上游，忽略全局出站代理。",
+                  })
+                : globalProxyUrl
+                  ? t("providerAdvanced.outboundProxy.followGlobalActive", {
+                      proxy: globalProxyUrl,
+                      defaultValue: "跟随全局出站代理：{{proxy}}",
+                    })
+                  : t("providerAdvanced.outboundProxy.followGlobalNone", {
+                      defaultValue: "全局未设置出站代理，当前为直连。",
+                    })}
+            </p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            {t("providerAdvanced.outboundProxy.hint", {
+              defaultValue: "仅在 cc-switch 代理转发该应用时生效。",
+            })}
+          </p>
+        </div>
+      </div>
+
       <div className="rounded-lg border border-border/50 bg-muted/20">
         <button
           type="button"

@@ -1630,8 +1630,24 @@ impl RequestForwarder {
             self.non_streaming_timeout
         };
 
-        // 获取全局代理 URL
-        let upstream_proxy_url: Option<String> = super::http_client::get_current_proxy_url();
+        // 出站代理：先取全局，再按供应商的出站代理模式解析最终生效的代理
+        let global_proxy_url: Option<String> = super::http_client::get_current_proxy_url();
+        let upstream_proxy_url: Option<String> =
+            provider.resolve_proxy_url(global_proxy_url.as_deref());
+        if log::log_enabled!(log::Level::Debug) && upstream_proxy_url != global_proxy_url {
+            log::debug!(
+                "[Forwarder] Provider '{}' overrides outbound proxy: {} (global: {})",
+                provider.name,
+                upstream_proxy_url
+                    .as_deref()
+                    .map(super::http_client::mask_url)
+                    .unwrap_or_else(|| "direct".to_string()),
+                global_proxy_url
+                    .as_deref()
+                    .map(super::http_client::mask_url)
+                    .unwrap_or_else(|| "direct".to_string()),
+            );
+        }
 
         // SOCKS5 代理不支持 CONNECT 隧道，需要用 reqwest
         let is_socks_proxy = upstream_proxy_url
@@ -1653,7 +1669,7 @@ impl RequestForwarder {
             log::debug!(
                 "[Forwarder] Using pooled reqwest client (preserve_exact_header_case={preserve_exact_header_case}, socks_proxy={is_socks_proxy})"
             );
-            let client = super::http_client::get();
+            let client = super::http_client::get_for(upstream_proxy_url.as_deref());
             let mut request = client.request(method.clone(), &url);
             if request_is_streaming {
                 // reqwest 的 timeout 是整请求超时；流式请求交给 response_processor

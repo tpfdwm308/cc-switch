@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Clock,
   FolderOpen,
+  FolderTree,
   X,
   CheckSquare,
 } from "lucide-react";
@@ -45,6 +46,8 @@ import { extractErrorMessage } from "@/utils/errorUtils";
 import { isMac } from "@/lib/platform";
 import { ProviderIcon } from "@/components/ProviderIcon";
 import { SessionItem } from "./SessionItem";
+import { SessionFolderGroup } from "./SessionFolderGroup";
+import { groupSessionsByFolder } from "./grouping";
 import { SessionMessageItem } from "./SessionMessageItem";
 import { SessionTocDialog, SessionTocSidebar } from "./SessionToc";
 import {
@@ -55,6 +58,11 @@ import {
   getProviderLabel,
   getSessionKey,
 } from "./utils";
+
+const VIEW_MODE_STORAGE_KEY = "cc-switch-session-view-mode";
+const COLLAPSED_FOLDERS_STORAGE_KEY = "cc-switch-session-collapsed-folders";
+
+type SessionViewMode = "flat" | "grouped";
 
 type ProviderFilter =
   | "all"
@@ -92,6 +100,21 @@ export function SessionManagerPage({ appId }: { appId: string }) {
     appId as ProviderFilter,
   );
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<SessionViewMode>(() => {
+    if (typeof window === "undefined") return "flat";
+    return window.localStorage.getItem(VIEW_MODE_STORAGE_KEY) === "grouped"
+      ? "grouped"
+      : "flat";
+  });
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const raw = window.localStorage.getItem(COLLAPSED_FOLDERS_STORAGE_KEY);
+      return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+    } catch {
+      return new Set();
+    }
+  });
 
   // 使用 FlexSearch 全文搜索
   const { search: searchSessions } = useSessionSearch({
@@ -102,6 +125,41 @@ export function SessionManagerPage({ appId }: { appId: string }) {
   const filteredSessions = useMemo(() => {
     return searchSessions(search);
   }, [searchSessions, search]);
+
+  const isSearching = search.trim().length > 0;
+
+  // 按项目目录分组（文件夹视图）
+  const folderGroups = useMemo(
+    () => groupSessionsByFolder(filteredSessions),
+    [filteredSessions],
+  );
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
+    }
+  }, [viewMode]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        COLLAPSED_FOLDERS_STORAGE_KEY,
+        JSON.stringify(Array.from(collapsedFolders)),
+      );
+    }
+  }, [collapsedFolders]);
+
+  const setFolderOpen = useCallback((key: string, open: boolean) => {
+    setCollapsedFolders((current) => {
+      const next = new Set(current);
+      if (open) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (filteredSessions.length === 0) {
@@ -559,6 +617,47 @@ export function SessionManagerPage({ appId }: { appId: string }) {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
+                              variant={
+                                viewMode === "grouped" ? "secondary" : "ghost"
+                              }
+                              size="icon"
+                              className={
+                                viewMode === "grouped"
+                                  ? "size-7 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-950/60"
+                                  : "size-7"
+                              }
+                              aria-label={
+                                viewMode === "grouped"
+                                  ? t("sessionManager.flatView", {
+                                      defaultValue: "按时间排列",
+                                    })
+                                  : t("sessionManager.groupByFolder", {
+                                      defaultValue: "按文件夹分组",
+                                    })
+                              }
+                              onClick={() =>
+                                setViewMode((mode) =>
+                                  mode === "grouped" ? "flat" : "grouped",
+                                )
+                              }
+                            >
+                              <FolderTree className="size-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {viewMode === "grouped"
+                              ? t("sessionManager.flatView", {
+                                  defaultValue: "按时间排列",
+                                })
+                              : t("sessionManager.groupByFolder", {
+                                  defaultValue: "按文件夹分组",
+                                })}
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
                               variant="ghost"
                               size="icon"
                               className="size-7"
@@ -769,6 +868,27 @@ export function SessionManagerPage({ appId }: { appId: string }) {
                         <p className="text-sm text-muted-foreground">
                           {t("sessionManager.noSessions")}
                         </p>
+                      </div>
+                    ) : viewMode === "grouped" ? (
+                      <div className="space-y-1">
+                        {folderGroups.map((group) => (
+                          <SessionFolderGroup
+                            key={group.key || "__unknown__"}
+                            group={group}
+                            open={
+                              isSearching || !collapsedFolders.has(group.key)
+                            }
+                            onOpenChange={(open) =>
+                              setFolderOpen(group.key, open)
+                            }
+                            selectedKey={selectedKey}
+                            selectionMode={selectionMode}
+                            searchQuery={search}
+                            selectedSessionKeys={selectedSessionKeys}
+                            onSelect={setSelectedKey}
+                            onToggleChecked={toggleSessionChecked}
+                          />
+                        ))}
                       </div>
                     ) : (
                       <div className="space-y-1">
