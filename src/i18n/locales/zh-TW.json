@@ -341,10 +341,6 @@
         "title": "成本定價",
         "description": "管理各模型 Token 計費規則"
       },
-      "globalProxy": {
-        "title": "全域出站代理伺服器",
-        "description": "設定 CC Switch 存取外部 API 時使用的代理伺服器"
-      },
       "data": {
         "title": "資料管理",
         "description": "匯入和匯出本地設定資料"
@@ -687,16 +683,9 @@
     "devModeRestartHint": "開發模式下不支援自動重新啟動，請手動重新啟動應用程式。",
     "saving": "正在儲存...",
     "globalProxy": {
-      "label": "全域代理伺服器",
-      "hint": "代理所有請求（API、Skills 下載等）。開啟本地路由時，應用程式的請求也會經過此代理伺服器。留空表示直連。",
-      "username": "使用者名稱（選填）",
-      "password": "密碼（選填）",
       "test": "測試連線",
       "scan": "掃描本地代理伺服器",
-      "clear": "清除",
       "scanFailed": "掃描失敗：{{error}}",
-      "saved": "代理伺服器設定已儲存",
-      "saveFailed": "儲存失敗：{{error}}",
       "testSuccess": "連線成功！延遲 {{latency}}ms",
       "testFailed": "連線失敗：{{error}}",
       "pricingDefaultsTitle": "計費預設設定",
@@ -1056,10 +1045,9 @@
   "providerAdvanced": {
     "outboundProxy": {
       "title": "出站代理",
-      "directLabel": "直連（繞過全域代理）",
-      "directDesc": "此供應商將直連上游，忽略全域出站代理。",
-      "followGlobalActive": "跟隨全域出站代理：{{proxy}}",
-      "followGlobalNone": "全域未設定出站代理，目前為直連。",
+      "urlPlaceholder": "http://127.0.0.1:7890 / socks5://127.0.0.1:1080",
+      "activeDesc": "此供應商將透過上述代理連線上游。",
+      "emptyDirect": "留空表示此供應商直連上游（忽略系統代理）。",
       "hint": "僅在 cc-switch 代理轉發該應用時生效。"
     },
     "testConfig": "模型測試設定",

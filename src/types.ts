@@ -223,9 +223,10 @@ export interface ProviderMeta {
   providerType?: string;
   // GitHub Copilot 关联账号 ID（旧字段，保留兼容读取）
   githubAccountId?: string;
-  // 出站代理模式：跟随全局（默认）或强制直连（绕过全局出站代理）。
-  // 仅在 cc-switch 代理转发该供应商请求时生效；未设置等价于 "global"。
-  proxyMode?: "global" | "direct";
+  // 该供应商的出站代理 URL（如 http://127.0.0.1:7890 / socks5://127.0.0.1:1080）。
+  // 为空/未设置表示直连（不走任何代理，也忽略系统代理）。
+  // 仅在 cc-switch 代理转发该供应商请求时生效。
+  proxyUrl?: string;
 }
 
 // Skill 同步方式

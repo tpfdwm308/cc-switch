@@ -341,10 +341,6 @@
         "title": "コスト計算",
         "description": "各モデルのトークン料金ルールを管理"
       },
-      "globalProxy": {
-        "title": "グローバル送信プロキシ",
-        "description": "CC Switch が外部 API にアクセスする際のプロキシを設定"
-      },
       "data": {
         "title": "データ管理",
         "description": "ローカル設定データのインポートとエクスポート"
@@ -716,16 +712,9 @@
     "devModeRestartHint": "開発モードでは自動再起動をサポートしていません。手動で再起動してください。",
     "saving": "保存中...",
     "globalProxy": {
-      "label": "グローバルプロキシ",
-      "hint": "すべてのリクエスト（API、Skills ダウンロードなど）をプロキシ経由で送信します。ローカルルーティング有効時、アプリのリクエストもこのプロキシを経由します。空欄で直接接続。",
-      "username": "ユーザー名（任意）",
-      "password": "パスワード（任意）",
       "test": "接続テスト",
       "scan": "ローカルプロキシをスキャン",
-      "clear": "クリア",
       "scanFailed": "スキャンに失敗しました: {{error}}",
-      "saved": "ルーティング設定を保存しました",
-      "saveFailed": "保存に失敗しました: {{error}}",
       "testSuccess": "接続成功！遅延 {{latency}}ms",
       "testFailed": "接続に失敗しました: {{error}}",
       "pricingDefaultsTitle": "課金のデフォルト設定",
@@ -1084,10 +1073,9 @@
   "providerAdvanced": {
     "outboundProxy": {
       "title": "アウトバウンドプロキシ",
-      "directLabel": "直接接続（グローバルプロキシをバイパス）",
-      "directDesc": "このプロバイダーはグローバルアウトバウンドプロキシを無視して直接接続します。",
-      "followGlobalActive": "グローバルアウトバウンドプロキシを使用: {{proxy}}",
-      "followGlobalNone": "グローバルアウトバウンドプロキシは未設定です。直接接続します。",
+      "urlPlaceholder": "http://127.0.0.1:7890 / socks5://127.0.0.1:1080",
+      "activeDesc": "このプロバイダーは上記のプロキシ経由で上流に接続します。",
+      "emptyDirect": "空欄の場合は直接接続します（システムプロキシを無視）。",
       "hint": "cc-switch のプロキシがこのアプリを転送する場合にのみ有効です。"
     },
     "testConfig": "モデルテスト設定",

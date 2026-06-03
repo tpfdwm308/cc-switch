@@ -6,8 +6,12 @@ import {
   FlaskConical,
   Coins,
   Globe,
+  Loader2,
+  Search,
+  TestTube2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -19,7 +23,11 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { ProviderTestConfig } from "@/types";
-import { useGlobalProxyUrl } from "@/hooks/useGlobalProxy";
+import {
+  useScanProxies,
+  useTestProxy,
+  type DetectedProxy,
+} from "@/hooks/useGlobalProxy";
 
 export type PricingModelSourceOption = "inherit" | "request" | "response";
 
@@ -34,8 +42,8 @@ interface ProviderAdvancedConfigProps {
   pricingConfig: ProviderPricingConfig;
   onTestConfigChange: (config: ProviderTestConfig) => void;
   onPricingConfigChange: (config: ProviderPricingConfig) => void;
-  proxyMode: "global" | "direct";
-  onProxyModeChange: (mode: "global" | "direct") => void;
+  proxyUrl: string;
+  onProxyUrlChange: (url: string) => void;
 }
 
 export function ProviderAdvancedConfig({
@@ -43,11 +51,26 @@ export function ProviderAdvancedConfig({
   pricingConfig,
   onTestConfigChange,
   onPricingConfigChange,
-  proxyMode,
-  onProxyModeChange,
+  proxyUrl,
+  onProxyUrlChange,
 }: ProviderAdvancedConfigProps) {
   const { t } = useTranslation();
-  const { data: globalProxyUrl } = useGlobalProxyUrl();
+  const scanMutation = useScanProxies();
+  const testMutation = useTestProxy();
+  const [detectedProxies, setDetectedProxies] = useState<DetectedProxy[]>([]);
+
+  const handleScanProxies = async () => {
+    const result = await scanMutation.mutateAsync();
+    setDetectedProxies(result);
+  };
+
+  const handleTestProxy = async () => {
+    const trimmed = proxyUrl.trim();
+    if (trimmed) {
+      await testMutation.mutateAsync(trimmed);
+    }
+  };
+
   const [isTestConfigOpen, setIsTestConfigOpen] = useState(testConfig.enabled);
   const [isPricingConfigOpen, setIsPricingConfigOpen] = useState(
     pricingConfig.enabled,
@@ -74,40 +97,79 @@ export function ProviderAdvancedConfig({
               })}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <Label
-              htmlFor="provider-proxy-direct"
-              className="text-sm text-muted-foreground"
-            >
-              {t("providerAdvanced.outboundProxy.directLabel", {
-                defaultValue: "直连（绕过全局代理）",
-              })}
-            </Label>
-            <Switch
-              id="provider-proxy-direct"
-              checked={proxyMode === "direct"}
-              onCheckedChange={(checked) =>
-                onProxyModeChange(checked ? "direct" : "global")
-              }
-            />
-          </div>
         </div>
-        <div className="border-t border-border/50 p-4">
+        <div className="border-t border-border/50 p-4 space-y-3">
+          <div className="flex gap-2">
+            <Input
+              value={proxyUrl}
+              onChange={(e) => onProxyUrlChange(e.target.value)}
+              placeholder={t("providerAdvanced.outboundProxy.urlPlaceholder", {
+                defaultValue: "http://127.0.0.1:7890 / socks5://127.0.0.1:1080",
+              })}
+              className="flex-1 font-mono text-sm"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              disabled={scanMutation.isPending}
+              onClick={handleScanProxies}
+              title={t("settings.globalProxy.scan", {
+                defaultValue: "扫描本地代理",
+              })}
+            >
+              {scanMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              disabled={!proxyUrl.trim() || testMutation.isPending}
+              onClick={handleTestProxy}
+              title={t("settings.globalProxy.test", {
+                defaultValue: "测试连接",
+              })}
+            >
+              {testMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <TestTube2 className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          {detectedProxies.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {detectedProxies.map((p) => (
+                <Button
+                  key={p.url}
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    onProxyUrlChange(p.url);
+                    setDetectedProxies([]);
+                  }}
+                  className="font-mono text-xs"
+                >
+                  {p.url}
+                </Button>
+              ))}
+            </div>
+          )}
           <p className="text-sm text-muted-foreground">
-            {proxyMode === "direct"
-              ? t("providerAdvanced.outboundProxy.directDesc", {
-                  defaultValue: "此供应商将直连上游，忽略全局出站代理。",
+            {proxyUrl.trim()
+              ? t("providerAdvanced.outboundProxy.activeDesc", {
+                  defaultValue: "此供应商将通过上述代理连接上游。",
                 })
-              : globalProxyUrl
-                ? t("providerAdvanced.outboundProxy.followGlobalActive", {
-                    proxy: globalProxyUrl,
-                    defaultValue: "跟随全局出站代理：{{proxy}}",
-                  })
-                : t("providerAdvanced.outboundProxy.followGlobalNone", {
-                    defaultValue: "全局未设置出站代理，当前为直连。",
-                  })}
+              : t("providerAdvanced.outboundProxy.emptyDirect", {
+                  defaultValue: "留空表示此供应商直连上游（忽略系统代理）。",
+                })}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {t("providerAdvanced.outboundProxy.hint", {
               defaultValue: "仅在 cc-switch 代理转发该应用时生效。",
             })}

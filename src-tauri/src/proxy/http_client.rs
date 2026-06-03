@@ -11,17 +11,16 @@ use std::net::IpAddr;
 use std::sync::RwLock;
 use std::time::Duration;
 
-/// 全局 HTTP 客户端实例
+/// 全局共享 HTTP 客户端实例。
+/// 直连 / 跟随系统代理，供 CC Switch 自身的对外请求（余额、用量、模型列表、
+/// Skills 下载等）复用。供应商转发用的「按供应商出站代理」客户端由 `get_for` 管理。
 static GLOBAL_CLIENT: OnceCell<RwLock<Client>> = OnceCell::new();
-
-/// 当前代理 URL（用于日志和状态查询）
-static CURRENT_PROXY_URL: OnceCell<RwLock<Option<String>>> = OnceCell::new();
 
 /// CC Switch 代理服务器当前监听的端口
 static CC_SWITCH_PROXY_PORT: OnceCell<RwLock<u16>> = OnceCell::new();
 
-/// 按出站代理 URL 缓存的客户端（用于「按供应商出站代理」）。
-/// key 为代理 URL，空串代表直连。与当前全局代理一致的 URL 不入缓存，统一走 `get()`。
+/// 按供应商出站代理 URL 缓存的客户端。
+/// key 为代理 URL，空串代表直连（强制 `.no_proxy()`，不走系统代理）。
 static CLIENT_CACHE: OnceCell<RwLock<HashMap<String, Client>>> = OnceCell::new();
 
 /// 设置 CC Switch 代理服务器的监听端口
@@ -31,11 +30,11 @@ pub fn set_proxy_port(port: u16) {
     if let Some(lock) = CC_SWITCH_PROXY_PORT.get() {
         if let Ok(mut current_port) = lock.write() {
             *current_port = port;
-            log::debug!("[GlobalProxy] Updated CC Switch proxy port to {port}");
+            log::debug!("[HttpClient] Updated CC Switch proxy port to {port}");
         }
     } else {
         let _ = CC_SWITCH_PROXY_PORT.set(RwLock::new(port));
-        log::debug!("[GlobalProxy] Initialized CC Switch proxy port to {port}");
+        log::debug!("[HttpClient] Initialized CC Switch proxy port to {port}");
     }
 }
 
@@ -48,174 +47,43 @@ fn get_proxy_port() -> u16 {
         .unwrap_or(15721) // 默认端口作为回退
 }
 
-/// 初始化全局 HTTP 客户端
+/// 初始化全局共享 HTTP 客户端
 ///
-/// 应在应用启动时调用一次。
-///
-/// # Arguments
-/// * `proxy_url` - 代理 URL，如 `http://127.0.0.1:7890` 或 `socks5://127.0.0.1:1080`
-///   传入 None 或空字符串表示直连
-pub fn init(proxy_url: Option<&str>) -> Result<(), String> {
-    let effective_url = proxy_url.filter(|s| !s.trim().is_empty());
-    let client = build_client(effective_url)?;
-
-    // 尝试初始化全局客户端，如果已存在则记录警告并使用 apply_proxy 更新
-    if GLOBAL_CLIENT.set(RwLock::new(client.clone())).is_err() {
-        log::warn!(
-            "[GlobalProxy] [GP-003] Already initialized, updating instead: {}",
-            effective_url
-                .map(mask_url)
-                .unwrap_or_else(|| "direct connection".to_string())
-        );
-        // 已初始化，改用 apply_proxy 更新
-        return apply_proxy(proxy_url);
-    }
-
-    // 初始化代理 URL 记录
-    let _ = CURRENT_PROXY_URL.set(RwLock::new(effective_url.map(|s| s.to_string())));
-
-    log::info!(
-        "[GlobalProxy] Initialized: {}",
-        effective_url
-            .map(mask_url)
-            .unwrap_or_else(|| "direct connection".to_string())
-    );
-
+/// 应在应用启动时调用一次。该客户端用于 CC Switch 自身的对外请求
+/// （余额/用量查询、模型列表、Skills 下载等），默认直连并跟随系统代理。
+/// 供应商转发用的「按供应商出站代理」客户端由 `get_for` 单独管理。
+pub fn init() -> Result<(), String> {
+    let client = build_client(None, false)?;
+    // 已初始化则忽略（该共享客户端无需热更新）
+    let _ = GLOBAL_CLIENT.set(RwLock::new(client));
+    log::info!("[HttpClient] Global shared client initialized (direct / follow system proxy)");
     Ok(())
 }
 
-/// 验证代理配置（不应用）
+/// 获取全局共享 HTTP 客户端
 ///
-/// 只验证代理 URL 是否有效，不实际更新全局客户端。
-/// 用于在持久化之前验证配置的有效性。
-///
-/// # Arguments
-/// * `proxy_url` - 代理 URL，None 或空字符串表示直连
-///
-/// # Returns
-/// 验证成功返回 Ok(())，失败返回错误信息
-pub fn validate_proxy(proxy_url: Option<&str>) -> Result<(), String> {
-    let effective_url = proxy_url.filter(|s| !s.trim().is_empty());
-    // 只调用 build_client 来验证，但不应用
-    build_client(effective_url)?;
-    Ok(())
-}
-
-/// 应用代理配置（假设已验证）
-///
-/// 直接应用代理配置到全局客户端，不做额外验证。
-/// 应在 validate_proxy 成功后调用。
-///
-/// # Arguments
-/// * `proxy_url` - 代理 URL，None 或空字符串表示直连
-pub fn apply_proxy(proxy_url: Option<&str>) -> Result<(), String> {
-    let effective_url = proxy_url.filter(|s| !s.trim().is_empty());
-    let new_client = build_client(effective_url)?;
-
-    // 更新客户端
-    if let Some(lock) = GLOBAL_CLIENT.get() {
-        let mut client = lock.write().map_err(|e| {
-            log::error!("[GlobalProxy] [GP-001] Failed to acquire write lock: {e}");
-            "Failed to update proxy: lock poisoned".to_string()
-        })?;
-        *client = new_client;
-    } else {
-        // 如果还没初始化，则初始化
-        return init(proxy_url);
-    }
-
-    // 更新代理 URL 记录
-    if let Some(lock) = CURRENT_PROXY_URL.get() {
-        let mut url = lock.write().map_err(|e| {
-            log::error!("[GlobalProxy] [GP-002] Failed to acquire URL write lock: {e}");
-            "Failed to update proxy URL record: lock poisoned".to_string()
-        })?;
-        *url = effective_url.map(|s| s.to_string());
-    }
-
-    log::info!(
-        "[GlobalProxy] Applied: {}",
-        effective_url
-            .map(mask_url)
-            .unwrap_or_else(|| "direct connection".to_string())
-    );
-
-    Ok(())
-}
-
-/// 更新代理配置（热更新）
-///
-/// 可在运行时调用以更改代理设置，无需重启应用。
-/// 注意：此函数同时验证和应用，如果需要先验证后持久化再应用，
-/// 请使用 validate_proxy + apply_proxy 组合。
-///
-/// # Arguments
-/// * `proxy_url` - 新的代理 URL，None 或空字符串表示直连
-#[allow(dead_code)]
-pub fn update_proxy(proxy_url: Option<&str>) -> Result<(), String> {
-    let effective_url = proxy_url.filter(|s| !s.trim().is_empty());
-    let new_client = build_client(effective_url)?;
-
-    // 更新客户端
-    if let Some(lock) = GLOBAL_CLIENT.get() {
-        let mut client = lock.write().map_err(|e| {
-            log::error!("[GlobalProxy] [GP-001] Failed to acquire write lock: {e}");
-            "Failed to update proxy: lock poisoned".to_string()
-        })?;
-        *client = new_client;
-    } else {
-        // 如果还没初始化，则初始化
-        return init(proxy_url);
-    }
-
-    // 更新代理 URL 记录
-    if let Some(lock) = CURRENT_PROXY_URL.get() {
-        let mut url = lock.write().map_err(|e| {
-            log::error!("[GlobalProxy] [GP-002] Failed to acquire URL write lock: {e}");
-            "Failed to update proxy URL record: lock poisoned".to_string()
-        })?;
-        *url = effective_url.map(|s| s.to_string());
-    }
-
-    log::info!(
-        "[GlobalProxy] Updated: {}",
-        effective_url
-            .map(mask_url)
-            .unwrap_or_else(|| "direct connection".to_string())
-    );
-
-    Ok(())
-}
-
-/// 获取全局 HTTP 客户端
-///
-/// 返回配置了代理的客户端（如果已配置代理），否则返回跟随系统代理的客户端。
+/// 用于 CC Switch 自身的对外请求；直连 / 跟随系统代理。
 pub fn get() -> Client {
     GLOBAL_CLIENT
         .get()
         .and_then(|lock| lock.read().ok())
         .map(|c| c.clone())
         .unwrap_or_else(|| {
-            log::warn!("[GlobalProxy] [GP-004] Client not initialized, using fallback");
-            build_client(None).unwrap_or_default()
+            log::warn!("[HttpClient] Client not initialized, using fallback");
+            build_client(None, false).unwrap_or_default()
         })
 }
 
-/// 按指定出站代理 URL 获取 HTTP 客户端（带缓存）。
+/// 按指定供应商出站代理 URL 获取 HTTP 客户端（带缓存）。
 ///
-/// 用于「按供应商出站代理」：转发时根据 `Provider::resolve_proxy_url` 的结果选择客户端。
+/// 转发时根据 `Provider::resolve_proxy_url` 的结果选择客户端：
+/// - `Some(url)`：走该出站代理。
+/// - `None`/空串：强制直连（`.no_proxy()`），不走系统代理。
 ///
-/// - 传入的 URL 与当前全局代理一致时，复用全局客户端（保留其热更新能力）。
-/// - 其他 URL（含 `None`/空串 = 直连）按 key 缓存，避免每个请求重建客户端。
-///   直连与自定义代理均不随全局代理变化，缓存无需失效。
-/// - 构建失败时回退到全局客户端，保证转发不被代理配置问题阻断。
+/// 结果按 key 缓存（空串 = 直连），避免每个请求重建客户端。
+/// 构建失败时回退到全局共享客户端，保证转发不被代理配置问题阻断。
 pub fn get_for(proxy_url: Option<&str>) -> Client {
     let effective = proxy_url.filter(|s| !s.trim().is_empty());
-
-    // 与当前全局代理一致 → 直接复用全局客户端
-    if effective.map(|s| s.to_string()) == get_current_proxy_url() {
-        return get();
-    }
 
     // key 为代理 URL；空串代表直连
     let key = effective.unwrap_or("").to_string();
@@ -228,7 +96,7 @@ pub fn get_for(proxy_url: Option<&str>) -> Client {
         }
     }
 
-    match build_client(effective) {
+    match build_client(effective, true) {
         Ok(client) => {
             if let Ok(mut map) = cache.write() {
                 map.insert(key, client.clone());
@@ -237,7 +105,7 @@ pub fn get_for(proxy_url: Option<&str>) -> Client {
         }
         Err(e) => {
             log::warn!(
-                "[GlobalProxy] [GP-005] get_for build failed for {}: {e}; falling back to global client",
+                "[HttpClient] get_for build failed for {}: {e}; falling back to global client",
                 effective
                     .map(mask_url)
                     .unwrap_or_else(|| "direct".to_string())
@@ -247,24 +115,12 @@ pub fn get_for(proxy_url: Option<&str>) -> Client {
     }
 }
 
-/// 获取当前代理 URL
-///
-/// 返回当前配置的代理 URL，None 表示直连。
-pub fn get_current_proxy_url() -> Option<String> {
-    CURRENT_PROXY_URL
-        .get()
-        .and_then(|lock| lock.read().ok())
-        .and_then(|url| url.clone())
-}
-
-/// 检查是否正在使用代理
-#[allow(dead_code)]
-pub fn is_proxy_enabled() -> bool {
-    get_current_proxy_url().is_some()
-}
-
 /// 构建 HTTP 客户端
-fn build_client(proxy_url: Option<&str>) -> Result<Client, String> {
+///
+/// - `proxy_url = Some(url)`：使用该出站代理。
+/// - `proxy_url = None` 且 `force_direct = true`：强制直连（`.no_proxy()`），忽略系统代理。
+/// - `proxy_url = None` 且 `force_direct = false`：跟随系统代理（指向 CC Switch 自身端口时防自环）。
+fn build_client(proxy_url: Option<&str>, force_direct: bool) -> Result<Client, String> {
     let mut builder = Client::builder()
         .timeout(Duration::from_secs(600))
         .connect_timeout(Duration::from_secs(30))
@@ -294,17 +150,21 @@ fn build_client(proxy_url: Option<&str>) -> Result<Client, String> {
         let proxy = reqwest::Proxy::all(url)
             .map_err(|e| format!("Invalid proxy URL '{}': {}", mask_url(url), e))?;
         builder = builder.proxy(proxy);
-        log::debug!("[GlobalProxy] Proxy configured: {}", mask_url(url));
+        log::debug!("[HttpClient] Proxy configured: {}", mask_url(url));
+    } else if force_direct {
+        // 强制直连：不走任何代理，连系统/环境变量代理也忽略
+        builder = builder.no_proxy();
+        log::debug!("[HttpClient] Direct connection (no proxy, ignoring system proxy)");
     } else {
-        // 未设置全局代理时，让 reqwest 自动检测系统代理（环境变量）
-        // 若系统代理指向本机，禁用系统代理避免自环
+        // 未指定代理时，让 reqwest 自动检测系统代理（环境变量）
+        // 若系统代理指向本机 CC Switch 端口，禁用系统代理避免自环
         if system_proxy_points_to_loopback() {
             builder = builder.no_proxy();
             log::warn!(
-                "[GlobalProxy] System proxy points to localhost, bypassing to avoid recursion"
+                "[HttpClient] System proxy points to localhost, bypassing to avoid recursion"
             );
         } else {
-            log::debug!("[GlobalProxy] Following system proxy (no explicit proxy configured)");
+            log::debug!("[HttpClient] Following system proxy (no explicit proxy configured)");
         }
     }
 
@@ -418,19 +278,21 @@ mod tests {
 
     #[test]
     fn test_build_client_direct() {
-        let result = build_client(None);
-        assert!(result.is_ok());
+        // 强制直连
+        assert!(build_client(None, true).is_ok());
+        // 跟随系统代理
+        assert!(build_client(None, false).is_ok());
     }
 
     #[test]
     fn test_build_client_with_http_proxy() {
-        let result = build_client(Some("http://127.0.0.1:7890"));
+        let result = build_client(Some("http://127.0.0.1:7890"), true);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_build_client_with_socks5_proxy() {
-        let result = build_client(Some("socks5://127.0.0.1:1080"));
+        let result = build_client(Some("socks5://127.0.0.1:1080"), true);
         assert!(result.is_ok());
     }
 
@@ -438,7 +300,7 @@ mod tests {
     fn test_build_client_invalid_url() {
         // reqwest::Proxy::all 对某些无效 URL 不会立即报错
         // 使用明确无效的 scheme 来触发错误
-        let result = build_client(Some("invalid-scheme://127.0.0.1:7890"));
+        let result = build_client(Some("invalid-scheme://127.0.0.1:7890"), true);
         assert!(result.is_err(), "Should reject invalid proxy scheme");
     }
 

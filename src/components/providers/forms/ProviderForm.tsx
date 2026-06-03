@@ -300,8 +300,8 @@ function ProviderFormFull({
   const [endpointAutoSelect, setEndpointAutoSelect] = useState<boolean>(
     () => initialData?.meta?.endpointAutoSelect ?? true,
   );
-  const [proxyMode, setProxyMode] = useState<"global" | "direct">(
-    () => initialData?.meta?.proxyMode ?? "global",
+  const [proxyUrl, setProxyUrl] = useState<string>(
+    () => initialData?.meta?.proxyUrl ?? "",
   );
   const supportsFullUrl = appId === "claude" || appId === "codex";
   const [localIsFullUrl, setLocalIsFullUrl] = useState<boolean>(() => {
@@ -344,7 +344,7 @@ function ProviderFormFull({
       setDraftCustomEndpoints([]);
     }
     setEndpointAutoSelect(initialData?.meta?.endpointAutoSelect ?? true);
-    setProxyMode(initialData?.meta?.proxyMode ?? "global");
+    setProxyUrl(initialData?.meta?.proxyUrl ?? "");
     setLocalIsFullUrl(
       supportsFullUrl ? (initialData?.meta?.isFullUrl ?? false) : false,
     );
@@ -1362,7 +1362,7 @@ function ProviderFormFull({
               ? useGeminiCommonConfigFlag
               : undefined,
       endpointAutoSelect,
-      proxyMode: proxyMode === "direct" ? "direct" : undefined,
+      proxyUrl: proxyUrl.trim() || undefined,
       claudeDesktopMode: undefined,
       // 保存 providerType（用于识别 Copilot / Codex OAuth 等特殊供应商）
       providerType,
@@ -2317,8 +2317,8 @@ function ProviderFormFull({
                 pricingConfig={pricingConfig}
                 onTestConfigChange={setTestConfig}
                 onPricingConfigChange={setPricingConfig}
-                proxyMode={proxyMode}
-                onProxyModeChange={setProxyMode}
+                proxyUrl={proxyUrl}
+                onProxyUrlChange={setProxyUrl}
               />
             )}
 

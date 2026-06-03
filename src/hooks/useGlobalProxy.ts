@@ -1,59 +1,18 @@
 /**
- * 全局出站代理 React Hooks
+ * 代理探测工具 React Hooks
  *
- * 提供获取、设置和测试全局代理的 React Query hooks。
+ * 为「按供应商出站代理」配置界面提供：测试代理连通性、扫描本地代理端口。
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import {
-  getGlobalProxyUrl,
-  setGlobalProxyUrl,
   testProxyUrl,
-  getUpstreamProxyStatus,
   scanLocalProxies,
   type ProxyTestResult,
-  type UpstreamProxyStatus,
   type DetectedProxy,
 } from "@/lib/api/globalProxy";
-
-/**
- * 获取全局代理 URL
- */
-export function useGlobalProxyUrl() {
-  return useQuery({
-    queryKey: ["globalProxyUrl"],
-    queryFn: getGlobalProxyUrl,
-    staleTime: 30 * 1000, // 30秒内不重新获取，避免展开时闪烁
-  });
-}
-
-/**
- * 设置全局代理 URL
- */
-export function useSetGlobalProxyUrl() {
-  const queryClient = useQueryClient();
-  const { t } = useTranslation();
-
-  return useMutation({
-    mutationFn: setGlobalProxyUrl,
-    onSuccess: () => {
-      toast.success(t("settings.globalProxy.saved"));
-      queryClient.invalidateQueries({ queryKey: ["globalProxyUrl"] });
-      queryClient.invalidateQueries({ queryKey: ["upstreamProxyStatus"] });
-    },
-    onError: (error: unknown) => {
-      const message =
-        error instanceof Error
-          ? error.message
-          : typeof error === "string"
-            ? error
-            : "Unknown error";
-      toast.error(t("settings.globalProxy.saveFailed", { error: message }));
-    },
-  });
-}
 
 /**
  * 测试代理连接
@@ -77,16 +36,6 @@ export function useTestProxy() {
     onError: (error: Error) => {
       toast.error(error.message);
     },
-  });
-}
-
-/**
- * 获取当前出站代理状态
- */
-export function useUpstreamProxyStatus() {
-  return useQuery<UpstreamProxyStatus>({
-    queryKey: ["upstreamProxyStatus"],
-    queryFn: getUpstreamProxyStatus,
   });
 }
 

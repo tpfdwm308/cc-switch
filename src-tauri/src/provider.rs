@@ -68,13 +68,15 @@ impl Provider {
 
     /// 解析该供应商生效的出站代理 URL（仅在 CC Switch 代理转发该请求时使用）。
     ///
-    /// - `Direct`：强制直连，返回 `None`（忽略全局出站代理）。
-    /// - `Global` 或未设置：跟随传入的全局出站代理 `global`。
-    pub fn resolve_proxy_url(&self, global: Option<&str>) -> Option<String> {
-        match self.meta.as_ref().and_then(|m| m.proxy_mode.as_ref()) {
-            Some(ProviderProxyMode::Direct) => None,
-            _ => global.map(|s| s.to_string()),
-        }
+    /// 返回供应商自己配置的出站代理 URL；为空/未设置表示直连（不走任何代理，
+    /// 也忽略系统/环境变量代理）。
+    pub fn resolve_proxy_url(&self) -> Option<String> {
+        self.meta
+            .as_ref()
+            .and_then(|m| m.proxy_url.as_deref())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
     }
 
     pub fn is_codex_oauth(&self) -> bool {
@@ -360,16 +362,6 @@ pub enum ClaudeDesktopMode {
     Proxy,
 }
 
-/// 供应商出站代理模式（仅在 CC Switch 代理转发该供应商请求时生效）。
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum ProviderProxyMode {
-    /// 跟随全局出站代理设置（默认）。
-    Global,
-    /// 强制直连，绕过全局出站代理。
-    Direct,
-}
-
 /// Claude Desktop 本地路由模式下暴露给 Desktop 的安全模型路由。
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -497,10 +489,11 @@ pub struct ProviderMeta {
     /// 用于多账号支持，关联到特定的 GitHub 账号
     #[serde(rename = "githubAccountId", skip_serializing_if = "Option::is_none")]
     pub github_account_id: Option<String>,
-    /// 出站代理模式：跟随全局（默认）或强制直连（绕过全局出站代理）。
-    /// 仅在 CC Switch 代理转发该供应商请求时生效；未设置等价于 `Global`。
-    #[serde(rename = "proxyMode", skip_serializing_if = "Option::is_none")]
-    pub proxy_mode: Option<ProviderProxyMode>,
+    /// 该供应商的出站代理 URL（如 `http://127.0.0.1:7890` / `socks5://127.0.0.1:1080`）。
+    /// 为空/未设置表示直连（不走任何代理，也忽略系统代理）。
+    /// 仅在 CC Switch 代理转发该供应商请求时生效。
+    #[serde(rename = "proxyUrl", skip_serializing_if = "Option::is_none")]
+    pub proxy_url: Option<String>,
 }
 
 impl ProviderMeta {
@@ -927,7 +920,7 @@ pub struct OpenCodeModelLimit {
 mod tests {
     use super::{
         ClaudeModelConfig, CodexModelConfig, GeminiModelConfig, OpenCodeProviderConfig, Provider,
-        ProviderManager, ProviderMeta, ProviderProxyMode, UniversalProvider,
+        ProviderManager, ProviderMeta, UniversalProvider,
     };
     use serde_json::json;
 
@@ -984,36 +977,43 @@ mod tests {
     }
 
     #[test]
-    fn resolve_proxy_url_respects_per_provider_mode() {
+    fn resolve_proxy_url_returns_per_provider_url() {
         let mut provider =
             Provider::with_id("p".to_string(), "P".to_string(), json!({ "env": {} }), None);
 
-        let global = Some("http://127.0.0.1:7890");
+        // 未设置 meta：直连
+        assert_eq!(provider.resolve_proxy_url(), None);
 
-        // 未设置 meta：跟随全局
-        assert_eq!(
-            provider.resolve_proxy_url(global),
-            Some("http://127.0.0.1:7890".to_string())
-        );
-        assert_eq!(provider.resolve_proxy_url(None), None);
+        // 未设置 proxy_url：直连
+        provider.meta = Some(ProviderMeta::default());
+        assert_eq!(provider.resolve_proxy_url(), None);
 
-        // 显式 Global：跟随全局
+        // 设置了出站代理 URL：使用该 URL
         provider.meta = Some(ProviderMeta {
-            proxy_mode: Some(ProviderProxyMode::Global),
+            proxy_url: Some("http://127.0.0.1:7890".to_string()),
             ..Default::default()
         });
         assert_eq!(
-            provider.resolve_proxy_url(global),
+            provider.resolve_proxy_url(),
             Some("http://127.0.0.1:7890".to_string())
         );
 
-        // Direct：强制直连，忽略全局
+        // 仅空白：视为直连
         provider.meta = Some(ProviderMeta {
-            proxy_mode: Some(ProviderProxyMode::Direct),
+            proxy_url: Some("   ".to_string()),
             ..Default::default()
         });
-        assert_eq!(provider.resolve_proxy_url(global), None);
-        assert_eq!(provider.resolve_proxy_url(None), None);
+        assert_eq!(provider.resolve_proxy_url(), None);
+
+        // 带首尾空白：去空白后使用
+        provider.meta = Some(ProviderMeta {
+            proxy_url: Some("  socks5://127.0.0.1:1080  ".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(
+            provider.resolve_proxy_url(),
+            Some("socks5://127.0.0.1:1080".to_string())
+        );
     }
 
     #[test]
