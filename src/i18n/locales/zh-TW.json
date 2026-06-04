@@ -171,6 +171,33 @@
         "oauthHint": "Google 官方使用 OAuth 個人驗證，無需填寫 API Key。首次使用時會自動開啟瀏覽器進行登入。",
         "apiKeyPlaceholder": "請輸入 Gemini API Key"
       }
+    },
+    "viewGrouped": "依分組",
+    "viewFlat": "平鋪",
+    "folders": {
+      "sectionTitle": "所屬分組",
+      "sectionHint": "在清單的「依分組」檢視下，此供應商會歸入所選分組。",
+      "selectFolder": "選擇分組...",
+      "noFolder": "（無）",
+      "unassigned": "未分類",
+      "createNew": "新增分組",
+      "createPlaceholder": "分組名稱",
+      "createConfirm": "建立",
+      "rename": "重新命名",
+      "delete": "刪除",
+      "menu": "分組操作",
+      "empty": "（此分組為空）",
+      "deleteTitle": "刪除分組",
+      "deleteConfirm": "刪除分組「{{name}}」？裡面的供應商會回到「未分類」，不會被刪除。",
+      "contextMove": "移動到分組",
+      "moveOut": "移出分組（未分配）",
+      "noFolders": "（暫無分組）",
+      "createAndMove": "新建分組並移入…",
+      "dialogTitle": "新建分組",
+      "dialogDesc": "建立一個新分組用於整理供應商。",
+      "dialogDescMove": "建立一個新分組，並把該供應商移入其中。",
+      "dragHandle": "拖曳排序",
+      "sortFailed": "分組排序更新失敗"
     }
   },
   "claudeCode": {

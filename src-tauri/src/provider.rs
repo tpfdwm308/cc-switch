@@ -5,6 +5,15 @@ use std::collections::HashMap;
 
 // SSOT 模式：不再写供应商副本文件
 
+/// 供应商文件夹（用于分组显示）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProviderFolder {
+    pub id: String,
+    pub name: String,
+    pub app_type: String,
+    pub sort_index: i64,
+}
+
 /// 供应商结构体
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Provider {
@@ -476,6 +485,10 @@ pub struct ProviderMeta {
     /// 用于多账号支持，关联到特定的 GitHub 账号
     #[serde(rename = "githubAccountId", skip_serializing_if = "Option::is_none")]
     pub github_account_id: Option<String>,
+    /// 所属文件夹 ID（用于分组显示）。
+    /// 存在 ProviderMeta 的 JSON 中，与 proxyUrl 等字段同级。
+    #[serde(rename = "folderId", skip_serializing_if = "Option::is_none")]
+    pub folder_id: Option<String>,
 }
 
 impl ProviderMeta {

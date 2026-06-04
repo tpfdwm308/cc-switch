@@ -223,6 +223,8 @@ export interface ProviderMeta {
   providerType?: string;
   // GitHub Copilot 关联账号 ID（旧字段，保留兼容读取）
   githubAccountId?: string;
+  // 所属文件夹 ID（用于分组显示）
+  folderId?: string;
 }
 
 // Skill 同步方式
@@ -541,6 +543,17 @@ export interface UniversalProvider {
 
 // 统一供应商映射（id -> UniversalProvider）
 export type UniversalProvidersMap = Record<string, UniversalProvider>;
+
+// ============================================================================
+// 供应商文件夹（用于分组显示）
+// ============================================================================
+
+export interface ProviderFolder {
+  id: string;
+  name: string;
+  appType: string;
+  sortIndex: number;
+}
 
 // ============================================================================
 // OpenCode 专属配置（v3.9.2+）

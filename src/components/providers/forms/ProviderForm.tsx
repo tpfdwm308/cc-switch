@@ -300,6 +300,9 @@ function ProviderFormFull({
   const [endpointAutoSelect, setEndpointAutoSelect] = useState<boolean>(
     () => initialData?.meta?.endpointAutoSelect ?? true,
   );
+  const [folderId, setFolderId] = useState<string | undefined>(
+    () => initialData?.meta?.folderId ?? undefined,
+  );
   const supportsFullUrl = appId === "claude" || appId === "codex";
   const [localIsFullUrl, setLocalIsFullUrl] = useState<boolean>(() => {
     if (!supportsFullUrl) return false;
@@ -341,6 +344,7 @@ function ProviderFormFull({
       setDraftCustomEndpoints([]);
     }
     setEndpointAutoSelect(initialData?.meta?.endpointAutoSelect ?? true);
+    setFolderId(initialData?.meta?.folderId ?? undefined);
     setLocalIsFullUrl(
       supportsFullUrl ? (initialData?.meta?.isFullUrl ?? false) : false,
     );
@@ -1358,6 +1362,7 @@ function ProviderFormFull({
               ? useGeminiCommonConfigFlag
               : undefined,
       endpointAutoSelect,
+      folderId: folderId || undefined,
       claudeDesktopMode: undefined,
       // 保存 providerType（用于识别 Copilot / Codex OAuth 等特殊供应商）
       providerType,
@@ -2308,10 +2313,13 @@ function ProviderFormFull({
             appId !== "openclaw" &&
             appId !== "hermes" && (
               <ProviderAdvancedConfig
+                appId={appId}
                 testConfig={testConfig}
                 pricingConfig={pricingConfig}
                 onTestConfigChange={setTestConfig}
                 onPricingConfigChange={setPricingConfig}
+                folderId={folderId}
+                onFolderIdChange={setFolderId}
               />
             )}
 

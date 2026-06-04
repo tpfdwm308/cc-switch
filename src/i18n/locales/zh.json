@@ -171,6 +171,33 @@
         "oauthHint": "Google 官方使用 OAuth 个人认证，无需填写 API Key。首次使用时会自动打开浏览器进行登录。",
         "apiKeyPlaceholder": "请输入 Gemini API Key"
       }
+    },
+    "viewGrouped": "按分组",
+    "viewFlat": "平铺",
+    "folders": {
+      "sectionTitle": "所属分组",
+      "sectionHint": "在列表的「按分组」视图下，此供应商会归入所选分组。",
+      "selectFolder": "选择分组...",
+      "noFolder": "（无）",
+      "unassigned": "未分配",
+      "createNew": "新建分组",
+      "createPlaceholder": "分组名称",
+      "createConfirm": "创建",
+      "rename": "重命名",
+      "delete": "删除",
+      "menu": "分组操作",
+      "empty": "（此分组为空）",
+      "deleteTitle": "删除分组",
+      "deleteConfirm": "删除分组「{{name}}」？里面的供应商会回到「未分配」，不会被删除。",
+      "contextMove": "移动到分组",
+      "moveOut": "移出分组（未分配）",
+      "noFolders": "（暂无分组）",
+      "createAndMove": "新建分组并移入…",
+      "dialogTitle": "新建分组",
+      "dialogDesc": "创建一个新分组用于整理供应商。",
+      "dialogDescMove": "创建一个新分组，并把该供应商移入其中。",
+      "dragHandle": "拖拽排序",
+      "sortFailed": "分组排序更新失败"
     }
   },
   "claudeCode": {

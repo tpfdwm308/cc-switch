@@ -1,5 +1,9 @@
 export type { AppId } from "./types";
-export { providersApi, universalProvidersApi } from "./providers";
+export {
+  providersApi,
+  providerFoldersApi,
+  universalProvidersApi,
+} from "./providers";
 export { settingsApi } from "./settings";
 export { backupsApi } from "./settings";
 export { mcpApi } from "./mcp";

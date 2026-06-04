@@ -171,6 +171,33 @@
         "oauthHint": "Google official uses OAuth personal authentication, no need to fill in API Key. The browser will automatically open for login on first use.",
         "apiKeyPlaceholder": "Enter Gemini API Key"
       }
+    },
+    "viewGrouped": "By group",
+    "viewFlat": "Flat",
+    "folders": {
+      "sectionTitle": "Group",
+      "sectionHint": "In the list's \"By group\" view, this provider is grouped under the selected group.",
+      "selectFolder": "Select group...",
+      "noFolder": "(None)",
+      "unassigned": "Unassigned",
+      "createNew": "New group",
+      "createPlaceholder": "Group name",
+      "createConfirm": "Create",
+      "rename": "Rename",
+      "delete": "Delete",
+      "menu": "Group actions",
+      "empty": "(This group is empty)",
+      "deleteTitle": "Delete group",
+      "deleteConfirm": "Delete group \"{{name}}\"? Providers in it will become unassigned, not deleted.",
+      "contextMove": "Move to group",
+      "moveOut": "Remove from group (unassigned)",
+      "noFolders": "(No groups yet)",
+      "createAndMove": "New group & move here…",
+      "dialogTitle": "New group",
+      "dialogDesc": "Create a new group to organize providers.",
+      "dialogDescMove": "Create a new group and move this provider into it.",
+      "dragHandle": "Drag to reorder",
+      "sortFailed": "Failed to update group order"
     }
   },
   "claudeCode": {

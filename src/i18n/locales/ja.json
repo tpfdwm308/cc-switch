@@ -171,6 +171,33 @@
         "oauthHint": "Google 公式は OAuth 個人認証を使用するため API Key は不要です。初回利用時にブラウザが開きます。",
         "apiKeyPlaceholder": "Gemini API Key を入力"
       }
+    },
+    "viewGrouped": "グループ別",
+    "viewFlat": "フラット",
+    "folders": {
+      "sectionTitle": "所属グループ",
+      "sectionHint": "リストの「グループ別」表示では、このプロバイダーは選択したグループに分類されます。",
+      "selectFolder": "グループを選択...",
+      "noFolder": "（なし）",
+      "unassigned": "未分類",
+      "createNew": "新規グループ",
+      "createPlaceholder": "グループ名",
+      "createConfirm": "作成",
+      "rename": "名前を変更",
+      "delete": "削除",
+      "menu": "グループ操作",
+      "empty": "（このグループは空です）",
+      "deleteTitle": "グループを削除",
+      "deleteConfirm": "グループ「{{name}}」を削除しますか？中のプロバイダーは未分類に戻り、削除はされません。",
+      "contextMove": "グループへ移動",
+      "moveOut": "グループから外す（未割り当て）",
+      "noFolders": "（グループがありません）",
+      "createAndMove": "新規グループを作成して移動…",
+      "dialogTitle": "新規グループ",
+      "dialogDesc": "プロバイダーを整理するための新しいグループを作成します。",
+      "dialogDescMove": "新しいグループを作成し、このプロバイダーを移動します。",
+      "dragHandle": "ドラッグして並べ替え",
+      "sortFailed": "グループの並び順の更新に失敗しました"
     }
   },
   "claudeCode": {

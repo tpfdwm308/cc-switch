@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   Provider,
+  ProviderFolder,
   UniversalProvider,
   UniversalProvidersMap,
 } from "@/types";
@@ -195,6 +196,50 @@ export const providersApi = {
    */
   async importHermesFromLive(): Promise<number> {
     return await invoke("import_hermes_providers_from_live");
+  },
+};
+
+// ============================================================================
+// 统一供应商（Universal Provider）API
+// ============================================================================
+
+export const providerFoldersApi = {
+  async getAll(appType: AppId): Promise<ProviderFolder[]> {
+    return await invoke("get_provider_folders", { appType });
+  },
+
+  async create(name: string, appType: AppId): Promise<ProviderFolder> {
+    return await invoke("create_provider_folder", { name, appType });
+  },
+
+  async rename(id: string, name: string): Promise<void> {
+    return await invoke("rename_provider_folder", { id, name });
+  },
+
+  async delete(id: string, appType: AppId): Promise<void> {
+    return await invoke("delete_provider_folder", { id, appType });
+  },
+
+  async updateSortOrder(
+    updates: { id: string; sortIndex: number }[],
+    appType: AppId,
+  ): Promise<void> {
+    return await invoke("update_provider_folder_sort_order", {
+      updates,
+      appType,
+    });
+  },
+
+  async moveProvider(
+    providerId: string,
+    appType: AppId,
+    folderId: string | null,
+  ): Promise<void> {
+    return await invoke("move_provider_to_folder", {
+      providerId,
+      appType,
+      folderId,
+    });
   },
 };
 

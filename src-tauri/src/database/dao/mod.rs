@@ -5,6 +5,7 @@
 pub mod failover;
 pub mod mcp;
 pub mod prompts;
+pub mod provider_folders;
 pub mod providers;
 pub mod providers_seed;
 pub mod proxy;

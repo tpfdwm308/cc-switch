@@ -1190,6 +1190,13 @@ pub fn run() {
             commands::set_app_config_dir_override,
             // provider sort order management
             commands::update_providers_sort_order,
+            // provider folder management
+            commands::get_provider_folders,
+            commands::create_provider_folder,
+            commands::rename_provider_folder,
+            commands::delete_provider_folder,
+            commands::update_provider_folder_sort_order,
+            commands::move_provider_to_folder,
             // theirs: config import/export and dialogs
             commands::export_config_to_file,
             commands::import_config_from_file,
