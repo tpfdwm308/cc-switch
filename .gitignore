@@ -19,6 +19,9 @@ GEMINI.md
 vitest-report.json
 nul
 
+# 本地构建临时覆盖配置（关闭 updater 产物等），不入库
+.build-override.json
+
 # Flatpak build artifacts
 flatpak/cc-switch.deb
 flatpak-build/

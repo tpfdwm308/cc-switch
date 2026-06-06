@@ -714,13 +714,41 @@ export function ProviderList({
       return;
     }
 
-    // ── 供应商同组内排序 ──
+    // ── 供应商：跨组移动 or 同组重排 ──
     const allGroups = groupProvidersByFolder(sortedProviders, folders);
     const sourceGroup = allGroups.find((g) =>
       g.providers.some((p) => p.id === active.id),
     );
     if (!sourceGroup) return;
-    // 只允许同组内拖拽
+
+    // 解析「目标分组」：
+    //  - over 是文件夹头/文件夹放置区 "folder:<id>" → 该文件夹
+    //  - over 是未分配组放置区 "__unassigned__" → null
+    //  - over 是某张供应商卡片 → 该卡片所属组（可能为 null）
+    let targetFolderId: string | null;
+    if (overId === "__unassigned__") {
+      targetFolderId = null;
+    } else if (overId.startsWith("folder:")) {
+      targetFolderId = overId.slice("folder:".length);
+    } else {
+      const overGroup = allGroups.find((g) =>
+        g.providers.some((p) => p.id === overId),
+      );
+      // over 命中不到任何已知卡片/分组 → 放弃
+      if (!overGroup) return;
+      targetFolderId = overGroup.folderId;
+    }
+
+    // 跨组：只改 folderId（不动 sortIndex），落位交给 groupProvidersByFolder 的排序规则。
+    if (targetFolderId !== sourceGroup.folderId) {
+      moveFolderMutation.mutate({
+        providerId: activeId,
+        folderId: targetFolderId,
+      });
+      return;
+    }
+
+    // 同组：必须落在本组某张卡片上才重排（落在头部/空白处不动）。
     if (!sourceGroup.providers.some((p) => p.id === over.id)) return;
 
     const oldIndex = sourceGroup.providers.findIndex((p) => p.id === active.id);

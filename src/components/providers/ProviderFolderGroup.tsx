@@ -3,6 +3,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { useDroppable } from "@dnd-kit/core";
 import type {
   DraggableAttributes,
   DraggableSyntheticListeners,
@@ -73,6 +74,12 @@ export function ProviderFolderGroup({
   const label = isUnassigned
     ? t("provider.folders.unassigned", { defaultValue: "未分配" })
     : group.folderName;
+
+  // 整个分组作为放置区：让「空分组」「未分配组」「拖到组内空白处」都能接收供应商。
+  // 放置 id 与文件夹头 sortable 同为 "folder:<id>"（未分配组用 "__unassigned__"），
+  // ProviderList 的 handleGroupedDragEnd 据此解析目标分组。
+  const dropId = isUnassigned ? "__unassigned__" : `folder:${group.folderId}`;
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: dropId });
 
   const [isEditing, setIsEditing] = useState(false);
   const [draftName, setDraftName] = useState(group.folderName);
@@ -220,7 +227,14 @@ export function ProviderFolderGroup({
       </div>
 
       <CollapsibleContent>
-        <div className="space-y-3 py-2 pl-5">
+        <div
+          ref={setDropRef}
+          className={cn(
+            "space-y-3 py-2 pl-5 transition-colors",
+            isOver &&
+              "rounded-md bg-amber-50/60 ring-1 ring-amber-400/50 dark:bg-amber-400/10",
+          )}
+        >
           {group.providers.length === 0 ? (
             <p className="px-2 py-1 text-xs text-muted-foreground">
               {t("provider.folders.empty", {
