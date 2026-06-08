@@ -1428,23 +1428,6 @@ impl RequestForwarder {
             None
         };
 
-        // 归一化 Claude Code 入口签名:仅当客户端 UA 形如 `claude-cli/<ver> (...)` 时生效。
-        // 让 VSCode 扩展(claude-vscode, agent-sdk/…)与独立 CLI 在上游看到完全一致的入口标识,
-        // 避免上游按入口指纹做差异化处理(一个能用一个被拦)。Copilot 反代有独立的 UA/指纹逻辑
-        // (copilot_fingerprint_headers),此处不介入。
-        let normalized_user_agent: Option<http::HeaderValue> = if is_copilot {
-            None
-        } else {
-            headers
-                .get(http::header::USER_AGENT)
-                .and_then(|v| v.to_str().ok())
-                .and_then(parse_claude_cli_version)
-                .and_then(|ver| {
-                    http::HeaderValue::from_str(&format!("claude-cli/{ver} (external, cli)")).ok()
-                })
-        };
-        let normalize_entrypoint = normalized_user_agent.is_some();
-
         // ============================================================
         // 构建有序 HeaderMap — 内联替换，保持客户端原始顺序
         // ============================================================
@@ -1453,8 +1436,6 @@ impl RequestForwarder {
         let mut saw_accept_encoding = false;
         let mut saw_anthropic_beta = false;
         let mut saw_anthropic_version = false;
-        let mut saw_user_agent = false;
-        let mut saw_x_app = false;
 
         for (key, value) in headers {
             let key_str = key.as_str();
@@ -1555,29 +1536,6 @@ impl RequestForwarder {
                 continue;
             }
 
-            // --- user-agent / x-app — 归一化为 Claude Code CLI 入口签名 ---
-            if normalize_entrypoint {
-                if key_str.eq_ignore_ascii_case("user-agent") {
-                    if !saw_user_agent {
-                        saw_user_agent = true;
-                        if let Some(ref ua) = normalized_user_agent {
-                            ordered_headers.append(http::header::USER_AGENT, ua.clone());
-                        }
-                    }
-                    continue;
-                }
-                if key_str.eq_ignore_ascii_case("x-app") {
-                    if !saw_x_app {
-                        saw_x_app = true;
-                        ordered_headers.append(
-                            http::HeaderName::from_static("x-app"),
-                            http::HeaderValue::from_static("cli"),
-                        );
-                    }
-                    continue;
-                }
-            }
-
             // --- Copilot 指纹头 — 跳过（由 auth_headers 提供） ---
             if copilot_fingerprint_headers
                 .iter()
@@ -1620,21 +1578,6 @@ impl RequestForwarder {
                 "anthropic-version",
                 http::HeaderValue::from_static("2023-06-01"),
             );
-        }
-
-        // 入口签名:若客户端未发 user-agent / x-app,补齐为 CLI 签名,确保与独立 CLI 完全一致
-        if normalize_entrypoint {
-            if !saw_user_agent {
-                if let Some(ref ua) = normalized_user_agent {
-                    ordered_headers.append(http::header::USER_AGENT, ua.clone());
-                }
-            }
-            if !saw_x_app {
-                ordered_headers.append(
-                    http::HeaderName::from_static("x-app"),
-                    http::HeaderValue::from_static("cli"),
-                );
-            }
         }
 
         // Codex OAuth 反代尽量对齐官方 Codex CLI 的会话路由信号。
@@ -2118,15 +2061,6 @@ fn extract_json_error_message(body: &Value) -> Option<String> {
         .find_map(|value| value.as_str().map(ToString::to_string))
 }
 
-/// 从 Claude Code 的 User-Agent 中提取版本号。
-/// `claude-cli/2.1.168 (external, claude-vscode, agent-sdk/0.3.168)` -> `Some("2.1.168")`。
-/// 非 Claude Code 客户端(Codex/Gemini/浏览器等)返回 None,不予改写。
-fn parse_claude_cli_version(ua: &str) -> Option<String> {
-    let rest = ua.strip_prefix("claude-cli/")?;
-    let version = rest.split_whitespace().next()?;
-    (!version.is_empty()).then(|| version.to_string())
-}
-
 fn split_endpoint_and_query(endpoint: &str) -> (&str, Option<&str>) {
     endpoint
         .split_once('?')
@@ -2460,44 +2394,6 @@ mod tests {
     use serde_json::json;
     use std::collections::HashMap;
     use std::time::Duration;
-
-    #[test]
-    fn parse_claude_cli_version_extracts_version_from_vscode_extension_ua() {
-        assert_eq!(
-            super::parse_claude_cli_version(
-                "claude-cli/2.1.168 (external, claude-vscode, agent-sdk/0.3.168)"
-            ),
-            Some("2.1.168".to_string())
-        );
-    }
-
-    #[test]
-    fn parse_claude_cli_version_extracts_version_from_cli_ua() {
-        assert_eq!(
-            super::parse_claude_cli_version("claude-cli/2.1.168 (external, cli)"),
-            Some("2.1.168".to_string())
-        );
-    }
-
-    #[test]
-    fn parse_claude_cli_version_ignores_non_claude_clients() {
-        assert_eq!(
-            super::parse_claude_cli_version("codex_cli_rs/0.80.0 (Mac 15.7.2; arm64) Terminal"),
-            None
-        );
-        assert_eq!(super::parse_claude_cli_version("Mozilla/5.0"), None);
-        assert_eq!(super::parse_claude_cli_version("claude-cli/"), None);
-    }
-
-    #[test]
-    fn normalized_cli_user_agent_is_idempotent() {
-        // 归一化目标与独立 CLI 现有 UA 完全一致,二次归一化保持不变。
-        let ver = super::parse_claude_cli_version("claude-cli/2.1.168 (external, cli)").unwrap();
-        assert_eq!(
-            format!("claude-cli/{ver} (external, cli)"),
-            "claude-cli/2.1.168 (external, cli)"
-        );
-    }
 
     fn test_provider_with_type(provider_type: Option<&str>) -> Provider {
         Provider {
