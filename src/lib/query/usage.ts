@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { usageApi } from "@/lib/api/usage";
 import { resolveUsageRange } from "@/lib/usageRange";
 import type { LogFilters, UsageRangeSelection } from "@/types/usage";
@@ -115,7 +115,6 @@ export const usageKeys = {
     ] as const,
   detail: (requestId: string) =>
     [...usageKeys.all, "detail", requestId] as const,
-  pricing: () => [...usageKeys.all, "pricing"] as const,
   limits: (providerId: string, appType: string) =>
     [...usageKeys.all, "limits", providerId, appType] as const,
   script: (providerId: string, appType: string) =>
@@ -266,54 +265,10 @@ export function useRequestDetail(requestId: string) {
   });
 }
 
-export function useModelPricing() {
-  return useQuery({
-    queryKey: usageKeys.pricing(),
-    queryFn: usageApi.getModelPricing,
-  });
-}
-
 export function useProviderLimits(providerId: string, appType: string) {
   return useQuery({
     queryKey: usageKeys.limits(providerId, appType),
     queryFn: () => usageApi.checkProviderLimits(providerId, appType),
     enabled: !!providerId && !!appType,
-  });
-}
-
-export function useUpdateModelPricing() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (params: {
-      modelId: string;
-      displayName: string;
-      inputCost: string;
-      outputCost: string;
-      cacheReadCost: string;
-      cacheCreationCost: string;
-    }) =>
-      usageApi.updateModelPricing(
-        params.modelId,
-        params.displayName,
-        params.inputCost,
-        params.outputCost,
-        params.cacheReadCost,
-        params.cacheCreationCost,
-      ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: usageKeys.all });
-    },
-  });
-}
-
-export function useDeleteModelPricing() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (modelId: string) => usageApi.deleteModelPricing(modelId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: usageKeys.all });
-    },
   });
 }

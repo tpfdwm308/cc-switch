@@ -1184,7 +1184,7 @@ function App() {
                 </Button>
                 <UpdateBadge
                   onClick={() => {
-                    setSettingsDefaultTab("about");
+                    setSettingsDefaultTab("general");
                     setCurrentView("settings");
                   }}
                 />

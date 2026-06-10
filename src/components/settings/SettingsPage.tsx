@@ -195,7 +195,7 @@ export function SettingsPage({
           onValueChange={setActiveTab}
           className="flex flex-col h-full"
         >
-          <TabsList className="grid w-full grid-cols-5 mb-6 glass rounded-lg">
+          <TabsList className="grid w-full grid-cols-4 mb-6 glass rounded-lg">
             <TabsTrigger value="usage">{t("usage.title")}</TabsTrigger>
             <TabsTrigger value="proxy">{t("settings.tabProxy")}</TabsTrigger>
             <TabsTrigger value="general">
@@ -204,12 +204,12 @@ export function SettingsPage({
             <TabsTrigger value="advanced">
               {t("settings.tabAdvanced")}
             </TabsTrigger>
-            <TabsTrigger value="about">{t("common.about")}</TabsTrigger>
           </TabsList>
 
           <div className="flex-1 min-h-0 flex flex-col">
             <div className="flex-1 overflow-y-auto overflow-x-hidden pr-2">
               <TabsContent value="general" className="space-y-6 mt-0">
+                <AboutSection isPortable={isPortable} />
                 {settings ? (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
@@ -255,6 +255,14 @@ export function SettingsPage({
                     />
                   </motion.div>
                 ) : null}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-6"
+                >
+                  <AuthCenterPanel />
+                </motion.div>
               </TabsContent>
 
               <TabsContent value="proxy" className="space-y-6 mt-0 pb-4">
@@ -453,18 +461,6 @@ export function SettingsPage({
                     </Accordion>
                   </motion.div>
                 ) : null}
-              </TabsContent>
-
-              <TabsContent value="about" className="mt-0 space-y-6">
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="space-y-6"
-                >
-                  <AuthCenterPanel />
-                </motion.div>
-                <AboutSection isPortable={isPortable} />
               </TabsContent>
 
               <TabsContent value="usage" className="mt-0">

@@ -54,15 +54,6 @@ export interface PaginatedLogs {
   pageSize: number;
 }
 
-export interface ModelPricing {
-  modelId: string;
-  displayName: string;
-  inputCostPerMillion: string;
-  outputCostPerMillion: string;
-  cacheReadCostPerMillion: string;
-  cacheCreationCostPerMillion: string;
-}
-
 export interface UsageSummary {
   totalRequests: number;
   totalCost: string;
